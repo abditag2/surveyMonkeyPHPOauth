@@ -9,69 +9,48 @@
 session_start();
 
 
-require __DIR__."/SurveyMonkey.class.php";
-require __DIR__."/vendor/autoload.php";
-
-define('API_KEY', 'wxy8bfy2kdjfjdkuhxcrchsu');
-define('CLIENT_ID', 'apisquarestack');
-define('API_SECRET', 'ZSrge9nssrXqeX7RYEsqAF7mJSe6k4ZT');
-
-function initialAuthentication(){
-    $provider = new \League\OAuth2\Client\Provider\GenericProvider([
-        'clientId'                => CLIENT_ID,    // The client ID assigned to you by the provider
-        'apiKey'                  => API_KEY,   // The client password assigned to you by the provider
-        'clientSecret'            => API_SECRET,
-        'redirectUri'             => 'http://localhost:63342/php-surveymonkey/api-surveyMonkey.php/',
-        'urlAuthorize'            => 'https://api.surveymonkey.net/oauth/authorize',
-        'urlAccessToken'          => 'https://api.surveymonkey.net/oauth/token',
-        'urlResourceOwnerDetails' => 'https://api.surveymonkey.net/oauth/resource'
-    ]);
+require __DIR__ . "/SurveyMonkey-api-class.php";
 
 
-// If we don't have an authorization code then get one
-    if (!isset($_GET['code'])) {
+//define('API_KEY', 'wxy8bfy2kdjfjdkuhxcrchsu');
+//define('CLIENT_ID', 'apisquarestack');
+//define('API_SECRET', 'ZSrge9nssrXqeX7RYEsqAF7mJSe6k4ZT');
 
-        // Fetch the authorization URL from the provider; this returns the
-        // urlAuthorize option and generates and applies any necessary parameters
-        // (e.g. state).
-        $authorizationUrl = $provider->getAuthorizationUrl();
 
-        // Get the state generated for you and store it to the session.
-        $_SESSION['oauth2state'] = $provider->getState();
+define('API_KEY', '9ke3sjx8rcymfftpmtfpfkvj');
+define('CLIENT_ID', 'squarestack2');
+define('API_SECRET', 'WtJh729n279s7ESP2Uwc3cEKKkJ6faXt');
 
-        // Redirect the user to the authorization URL.
-        header('Location: ' . $authorizationUrl);
-        exit;
+define('REDIRECT_URL', 'http://localhost:63342/php-surveymonkey/api-surveyMonkey.php/');
 
-// Check given state against previously stored one to mitigate CSRF attack
-    } elseif (empty($_GET['state']) || ($_GET['state'] !== $_SESSION['oauth2state'])) {
+//Example :
 
-        unset($_SESSION['oauth2state']);
-        exit('Invalid state');
-    }
-    else {
-        try {
-            $accessToken = $provider->getAccessToken('authorization_code', [
-                'code' => $_GET['code']
-            ]);
-            $_SESSION['access_token'] = $accessToken;
-        } catch (\League\OAuth2\Client\Provider\Exception\IdentityProviderException $e) {
+//THe sleeps between the calls is because the surveymonkey has a limited API rate of 2 calls per
+$provider = new SurveyMonkey(API_KEY, CLIENT_ID, API_SECRET, REDIRECT_URL );
+$provider->initialAuthentication();
 
-            // Failed to get the access token or user details.
-            exit($e->getMessage());
-        }
-    }
+sleep (1 );
+//get the list of last 1000 surveys
+$last1000SurveysArray = $provider->getLastNSurveyList(1000);
+$survey1ID = $last1000SurveysArray[0]['survey_id'];
+
+sleep (1 );
+
+//Left side accourding to task
+$countsOverDayWeekMonth = $provider->getResponsesOverDayWeekMonth($survey1ID);
+echo "day: ".$countsOverDayWeekMonth['lastDay']."\n";
+echo "week: ".$countsOverDayWeekMonth['lastWeek']."\n";
+echo "month:  ".$countsOverDayWeekMonth['lastMonth']."\n";
+
+sleep (1 );
+//Middle for a given survey ID, it gets the completion rate
+$surveyCompletionRate = $provider->getSurveyCompletionRate($survey1ID);
+echo "started: ".$surveyCompletionRate['started']."\n";
+echo "completed: ".$surveyCompletionRate['completed']."\n";
+
+sleep(1);
+//Right side:
+$last20Respondents = $provider->getLastNRespondentsForASurvey($survey1ID, 20);
+foreach($last20Respondents as $respondent){
+    echo 'ID: '.$respondent['date_start']."Name: ".$respondent['first_name']." ".$respondent['first_name']."\n";
 }
-
-
-
-initialAuthentication();
-$provider = new SurveyMonkey(API_KEY, $_SESSION['access_token']);
-$last200SurveysArray = $provider->getLastNSurveyList(200);
-$survey1ID = $last200SurveysArray[0]['survey_id'];
-
-$respondentsToSurvey1 = $provider->getLast1000RespondentsForASurvey($survey1ID);
-var_dump($respondentsToSurvey1);
-
-//$oneSurveyDetails = $provider->getSurveyDetails($survey1ID);
-//var_dump(json_encode($oneSurveyDetails));

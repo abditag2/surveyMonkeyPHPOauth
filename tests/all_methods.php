@@ -1,6 +1,6 @@
 <?php
 
-require_once('../SurveyMonkey.class.php');
+require_once('../SurveyMonkey-api-class.php');
 
 /**
  * Call all methods using PHP SDK for SurveyMonkey API v2
