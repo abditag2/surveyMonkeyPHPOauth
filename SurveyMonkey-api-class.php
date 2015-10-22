@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . "/vendor/autoload.php";
+
 /**
  * Class for SurveyMonkey API v2
  * @package default
@@ -7,76 +8,9 @@ require __DIR__ . "/vendor/autoload.php";
 class SurveyMonkey
 {
     /**
-     * @var string API key
-     * @access protected
-     */
-    protected $_apiKey;
-
-    /**
-     * @var is the mashery username for surveyMonkey
-     */
-    protected $_clientID;
-
-    /**
-     * @var is the api secret provided by mashery
-     */
-    protected $_apiSecret;
-
-    /**
-     * @var redirect URI
-     */
-    protected $_redirectUri;
-
-
-    /**
-     * @var string API access token
-     * @access protected
-     */
-    protected $_accessToken;
-
-    /**
-     * @var string API protocol
-     * @access protected
-     */
-    protected $_protocol;
-
-    /**
-     * @var string API hostname
-     * @access protected
-     */
-    protected $_hostname;
-
-    /**
-     * @var string API version
-     * @access protected
-     */
-    protected $_version;
-
-    /**
-     * @var resource $conn The client connection instance to use.
-     * @access private
-     */
-    private $conn = null;
-
-    /**
-     * @var array (optional) cURL connection options
-     * @access protected
-     */
-    protected $_connectionOptions;
-
-    /**
      * @const SurveyMonkey Status code:  Success
      */
     const SM_STATUS_SUCCESS = 0;
-
-    public static function successfulHttpResponse($code)
-    {
-        if ($code >= 200 and $code < 300) {
-            return true;
-        }
-        return false;
-    }
-
     /**
      * SurveyMonkey API Status code definitions
      */
@@ -89,16 +23,53 @@ class SurveyMonkey
         5 => "System Error",
         6 => "Plan Limit Exceeded"
     );
-
     /**
-     * Explain Survey Monkey status code
-     * @param integer $code Status code
-     * @return string Definition
+     * @var string API key
+     * @access protected
      */
-    public static function explainStatusCode($code)
-    {
-        return self::$SM_STATUS_CODES[$code];
-    }
+    protected $_apiKey;
+    /**
+     * @var is the mashery username for surveyMonkey
+     */
+    protected $_clientID;
+    /**
+     * @var is the api secret provided by mashery
+     */
+    protected $_apiSecret;
+    /**
+     * @var redirect URI
+     */
+    protected $_redirectUri;
+    /**
+     * @var string API access token
+     * @access protected
+     */
+    protected $_accessToken;
+    /**
+     * @var string API protocol
+     * @access protected
+     */
+    protected $_protocol;
+    /**
+     * @var string API hostname
+     * @access protected
+     */
+    protected $_hostname;
+    /**
+     * @var string API version
+     * @access protected
+     */
+    protected $_version;
+    /**
+     * @var array (optional) cURL connection options
+     * @access protected
+     */
+    protected $_connectionOptions;
+    /**
+     * @var resource $conn The client connection instance to use.
+     * @access private
+     */
+    private $conn = null;
 
     /**
      * The SurveyMonkey Constructor.
@@ -135,40 +106,11 @@ class SurveyMonkey
         $this->_connectionOptions = $connectionOptions;
     }
 
-    /**
-     * Build the request URI
-     * @param string $endpoint API endpoint to call in the form: resource/method
-     * @return string Constructed URI
-     */
-    protected function buildUri($endpoint)
-    {
-        return $this->_protocol . '://' . $this->_hostname . '/' . $this->_version . '/' . $endpoint . '?api_key=' . $this->_apiKey;
-    }
-
-    protected function builtUriWithoutAPIKey($endpoint)
-    {
-        return $this->_protocol . '://' . $this->_hostname . '/' . $endpoint;
-    }
 
     /**
-     * Get the connection
-     * @return boolean
+     * This function initializes the athentication and acquires an access token. Once access token is acquired,
+     * it is put inside the session. And also kept in the class to be used in the future.
      */
-    protected function getConnection()
-    {
-        $this->conn = curl_init();
-        return is_resource($this->conn);
-    }
-
-    /**
-     * Close the connection
-     */
-    protected function closeConnection()
-    {
-        curl_close($this->conn);
-    }
-
-
     public function initialAuthentication()
     {
         $provider = new \League\OAuth2\Client\Provider\GenericProvider([
@@ -218,6 +160,22 @@ class SurveyMonkey
 
     }
 
+    protected function builtUriWithoutAPIKey($endpoint)
+    {
+        return $this->_protocol . '://' . $this->_hostname . '/' . $endpoint;
+    }
+
+    /**
+     * Retrieve a given survey's metadata.
+     * @see https://developer.surveymonkey.com/mashery/get_survey_details
+     * @param string $surveyId Survey ID
+     * @return array Results
+     */
+    public function getSurveyDetails($surveyId)
+    {
+        $params = array('survey_id' => $surveyId);
+        return $this->run('surveys/get_survey_details', $params);
+    }
 
     /**
      * Run the
@@ -261,6 +219,15 @@ class SurveyMonkey
         else return $this->success($parsedResult["data"]);
     }
 
+    /**
+     * Get the connection
+     * @return boolean
+     */
+    protected function getConnection()
+    {
+        $this->conn = curl_init();
+        return is_resource($this->conn);
+    }
 
     /**
      * Return an error
@@ -276,16 +243,39 @@ class SurveyMonkey
     }
 
     /**
-     * Return a success with data
-     * @param string $data Payload
-     * @return array Result
+     * Build the request URI
+     * @param string $endpoint API endpoint to call in the form: resource/method
+     * @return string Constructed URI
      */
-    protected function success($data)
+    protected function buildUri($endpoint)
     {
-        return array(
-            'success' => true,
-            'data' => $data
-        );
+        return $this->_protocol . '://' . $this->_hostname . '/' . $this->_version . '/' . $endpoint . '?api_key=' . $this->_apiKey;
+    }
+
+    public static function successfulHttpResponse($code)
+    {
+        if ($code >= 200 and $code < 300) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Close the connection
+     */
+    protected function closeConnection()
+    {
+        curl_close($this->conn);
+    }
+
+    /**
+     * Explain Survey Monkey status code
+     * @param integer $code Status code
+     * @return string Definition
+     */
+    public static function explainStatusCode($code)
+    {
+        return self::$SM_STATUS_CODES[$code];
     }
 
 
@@ -296,52 +286,16 @@ class SurveyMonkey
     //survey methods
 
     /**
-     * Retrieves a paged list of surveys in a user's account.
-     * @see https://developer.surveymonkey.com/mashery/get_survey_list
-     * @param array $params optional request array
+     * Return a success with data
+     * @param string $data Payload
      * @return array Result
      */
-    public function getSurveyList($params = array())
+    protected function success($data)
     {
-        return $this->run('surveys/get_survey_list', $params);
-    }
-
-    /**
-     * Retrieve a given survey's metadata.
-     * @see https://developer.surveymonkey.com/mashery/get_survey_details
-     * @param string $surveyId Survey ID
-     * @return array Results
-     */
-    public function getSurveyDetails($surveyId)
-    {
-        $params = array('survey_id' => $surveyId);
-        return $this->run('surveys/get_survey_details', $params);
-    }
-
-    /**
-     * Retrieves a paged list of collectors for a survey in a user's account.
-     * @see https://developer.surveymonkey.com/mashery/get_collector_list
-     * @param string $surveyId Survey ID
-     * @param array $params optional request array
-     * @return array Results
-     */
-    public function getCollectorList($surveyId, $params = array())
-    {
-        $params['survey_id'] = $surveyId;
-        return $this->run('surveys/get_collector_list', $params);
-    }
-
-    /**
-     * Retrieves a paged list of respondents for a given survey and optionally collector
-     * @see https://developer.surveymonkey.com/mashery/get_respondent_list
-     * @param string $surveyId Survey ID
-     * @param array $params optional request array
-     * @return array Results
-     */
-    public function getRespondentList($surveyId, $params = array())
-    {
-        $params['survey_id'] = $surveyId;
-        return $this->run('surveys/get_respondent_list', $params);
+        return array(
+            'success' => true,
+            'data' => $data
+        );
     }
 
     /**
@@ -373,20 +327,6 @@ class SurveyMonkey
     }
 
     /**
-     * Returns how many respondents have started and/or completed the survey for the given collector
-     * @see https://developer.surveymonkey.com/mashery/get_response_counts
-     * @param string $collectorId Collector ID
-     * @return array Results
-     */
-    public function getResponseCounts($collectorId)
-    {
-        $params = array('collector_id' => $collectorId);
-        return $this->run('surveys/get_response_counts', $params);
-    }
-
-    //user methods
-
-    /**
      * Returns basic information about the logged-in user
      * @see https://developer.surveymonkey.com/mashery/get_user_details
      * @return array Results
@@ -395,8 +335,6 @@ class SurveyMonkey
     {
         return $this->run('user/get_user_details');
     }
-
-    //template methods
 
     /**
      * Retrieves a paged list of templates provided by survey monkey.
@@ -408,8 +346,6 @@ class SurveyMonkey
     {
         return $this->run('templates/get_template_list', $params);
     }
-
-    //collector methods
 
     /**
      * Retrieves a paged list of templates provided by survey monkey.
@@ -432,8 +368,6 @@ class SurveyMonkey
         return $this->run('collectors/create_collector', $params);
     }
 
-    //batch methods
-
     /**
      * Create a survey, email collector and email message based on a template or existing survey.
      * @see https://developer.surveymonkey.com/mashery/create_flow
@@ -451,6 +385,8 @@ class SurveyMonkey
         return $this->run('batch/create_flow', $params);
     }
 
+    //user methods
+
     /**
      * Create an email collector and email message attaching them to an existing survey.
      * @see https://developer.surveymonkey.com/mashery/send_flow
@@ -464,6 +400,7 @@ class SurveyMonkey
         return $this->run('batch/send_flow', $params);
     }
 
+    //template methods
 
     /**
      * returns a list of last N surveys in an array
@@ -504,34 +441,20 @@ class SurveyMonkey
             throw new SurveyMonkey_Exception('There was a problem fetching list of the surveys');
     }
 
+    //collector methods
 
     /**
-     * This functin return the last 1000 respondents to a sruvey (only the date they responded to the survey)
-     *
-     * @param $surveyID, N is the count of how many last respondents do we need
-     * @return mixed
-     * Example output
-     * ["first_name"]=> string(0) ""
-     * ["last_name"]=> string(0) ""
-     * ["date_start"]=> string(19) "2015-10-22 00:01:44"
-     * ["email"]=> string(0) ""
-     * ["respondent_id"]=> string(10) "4274915876"
-     * @throws SurveyMonkey_Exception
+     * Retrieves a paged list of surveys in a user's account.
+     * @see https://developer.surveymonkey.com/mashery/get_survey_list
+     * @param array $params optional request array
+     * @return array Result
      */
-    public function getLastNRespondentsForASurvey($surveyID, $N)
+    public function getSurveyList($params = array())
     {
-        $respondentsToSurvey1 = $this->getRespondentList($surveyID, array(
-            'page_size' => $N,
-            'fields' => array(
-            'date_start', 'first_name', 'last_name', 'email')
-        ));
-
-        if ($respondentsToSurvey1['success'])
-            return $respondentsToSurvey1['data']['respondents'];
-        else
-            throw new SurveyMonkey_Exception('respondent List Not available');
+        return $this->run('surveys/get_survey_list', $params);
     }
 
+    //batch methods
 
     /**
      * @param $surveyID
@@ -550,12 +473,36 @@ class SurveyMonkey
         $startedCount = $response['data']['started'];
         $completedCount = $response['data']['completed'];
 
-        $startedPercent = $startedCount/ ($startedCount + $completedCount) * 100;
+        $startedPercent = $startedCount / ($startedCount + $completedCount) * 100;
         $completedPercent = $completedCount / ($startedCount + $completedCount) * 100;
 
         return array('started' => $startedPercent, 'completed' => $completedPercent);
     }
 
+    /**
+     * Retrieves a paged list of collectors for a survey in a user's account.
+     * @see https://developer.surveymonkey.com/mashery/get_collector_list
+     * @param string $surveyId Survey ID
+     * @param array $params optional request array
+     * @return array Results
+     */
+    public function getCollectorList($surveyId, $params = array())
+    {
+        $params['survey_id'] = $surveyId;
+        return $this->run('surveys/get_collector_list', $params);
+    }
+
+    /**
+     * Returns how many respondents have started and/or completed the survey for the given collector
+     * @see https://developer.surveymonkey.com/mashery/get_response_counts
+     * @param string $collectorId Collector ID
+     * @return array Results
+     */
+    public function getResponseCounts($collectorId)
+    {
+        $params = array('collector_id' => $collectorId);
+        return $this->run('surveys/get_response_counts', $params);
+    }
 
     /**
      * @param $surveyID
@@ -606,6 +553,48 @@ class SurveyMonkey
 
         return array('lastDay' => $responsesInLastDayCount, 'lastWeek' => $responsesInLastWeekCount,
             'lastMonth' => $responsesInLastMonthCount);
+    }
+
+    /**
+     * This functin return the last 1000 respondents to a sruvey (only the date they responded to the survey)
+     *
+     * @param $surveyID , N is the count of how many last respondents do we need
+     * @return mixed
+     * Example output
+     * ["analysis_url"]=> string "2015-10-22 00:01:44"
+     * ["first_name"]=> string(0) ""
+     * ["last_name"]=> string(0) ""
+     * ["date_start"]=> string(19) "2015-10-22 00:01:44"
+     * ["email"]=> string(0) ""
+     * ["respondent_id"]=> string(10) "4274915876"
+     * @throws SurveyMonkey_Exception
+     */
+    public function getLastNRespondentsForASurvey($surveyID, $N)
+    {
+        $respondentsToSurvey = $this->getRespondentList($surveyID, array(
+            'page_size' => $N,
+            'fields' => array(
+                'date_start', 'first_name', 'last_name', 'email', 'analysis_url')
+        ));
+
+
+        if ($respondentsToSurvey['success'])
+            return $respondentsToSurvey['data']['respondents'];
+        else
+            throw new SurveyMonkey_Exception('respondent List Not available');
+    }
+
+    /**
+     * Retrieves a paged list of respondents for a given survey and optionally collector
+     * @see https://developer.surveymonkey.com/mashery/get_respondent_list
+     * @param string $surveyId Survey ID
+     * @param array $params optional request array
+     * @return array Results
+     */
+    public function getRespondentList($surveyId, $params = array())
+    {
+        $params['survey_id'] = $surveyId;
+        return $this->run('surveys/get_respondent_list', $params);
     }
 
 }

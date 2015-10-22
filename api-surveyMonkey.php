@@ -52,5 +52,5 @@ sleep(1);
 //Right side:
 $last20Respondents = $provider->getLastNRespondentsForASurvey($survey1ID, 20);
 foreach($last20Respondents as $respondent){
-    echo 'ID: '.$respondent['date_start']."Name: ".$respondent['first_name']." ".$respondent['first_name']."\n";
+    echo 'ID: '.$respondent['date_start']."Name: ".$respondent['first_name']." ".$respondent['first_name']." Link to survey: ".$respondent['analysis_url']."\n";
 }
