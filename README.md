@@ -5,39 +5,55 @@ PHP class for SurveyMonkey API
 Basic usage
 ----
 ```
-$SM = new SurveyMonkey("myApiKey" , "myAccessToken");
-$result = $SM->getSurveyList();
-if ($result["success"]) print_r( $result["data"]["surveys"] );
-else print_r($result["message"]);   // Print out the error message
-```
 
-All methods return an array containing a **success** boolean, and the **data** -or- an error **message**
+session_start();
 
-Advanced
-----
-```
-$SM = new SurveyMonkey("myApiKey" , "myAccessToken",
-    array(  // Override default API options (quite useless at the moment)
-        'protocol' => 'http',                       // will not work.. they require SSL
-        'hostname' => 'fake-api.surveymonkey.net'   // will also not work..
-    ),
-    array(  // CURL override options
-        CURLOPT_SSL_VERIFYPEER => false     // Better add cacert.pam, no?
-        // ...<Any CURLOPT>...
-    )
-);
-$result = $SM->getSurveyList(array(
-    "fields" => array(
-        "title",
-        "analysis_url",
-        "date_created",
-        "date_modified",
-        "question_count",
-        "num_responses"
-    ),
-    'page_size' => 50,
-    'page' => 2
-));
+
+require __DIR__ . "/SurveyMonkey-api-class.php";
+
+
+//define('API_KEY', 'wxy8bfy2kdjfjdkuhxcrchsu');
+//define('CLIENT_ID', 'apisquarestack');
+//define('API_SECRET', 'ZSrge9nssrXqeX7RYEsqAF7mJSe6k4ZT');
+
+
+define('API_KEY', '9ke3sjx8rcymfftpmtfpfkvj');
+define('CLIENT_ID', 'squarestack2');
+define('API_SECRET', 'WtJh729n279s7ESP2Uwc3cEKKkJ6faXt');
+
+define('REDIRECT_URL', 'http://localhost:63342/php-surveymonkey/api-surveyMonkey.php/');
+
+//Example :
+
+//THe sleeps between the calls is because the surveymonkey has a limited API rate of 2 calls per
+$provider = new SurveyMonkey(API_KEY, CLIENT_ID, API_SECRET, REDIRECT_URL );
+$provider->initialAuthentication();
+
+sleep (1 );
+//get the list of last 1000 surveys
+$last1000SurveysArray = $provider->getLastNSurveyList(1000);
+$survey1ID = $last1000SurveysArray[0]['survey_id'];
+
+sleep (1 );
+
+//Left side accourding to task
+$countsOverDayWeekMonth = $provider->getResponsesOverDayWeekMonth($survey1ID);
+echo "day: ".$countsOverDayWeekMonth['lastDay']."\n";
+echo "week: ".$countsOverDayWeekMonth['lastWeek']."\n";
+echo "month:  ".$countsOverDayWeekMonth['lastMonth']."\n";
+
+sleep (1 );
+//Middle for a given survey ID, it gets the completion rate
+$surveyCompletionRate = $provider->getSurveyCompletionRate($survey1ID);
+echo "started: ".$surveyCompletionRate['started']."\n";
+echo "completed: ".$surveyCompletionRate['completed']."\n";
+
+sleep(1);
+//Right side:
+$last20Respondents = $provider->getLastNRespondentsForASurvey($survey1ID, 20);
+foreach($last20Respondents as $respondent){
+    echo 'ID: '.$respondent['date_start']."Name: ".$respondent['first_name']." ".$respondent['first_name']." Link to survey: ".$respondent['analysis_url']."\n";
+}
 ```
 
 All methods
